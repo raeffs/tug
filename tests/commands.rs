@@ -1373,7 +1373,7 @@ fn all_reports_no_running_projects_without_issuing_any_verb() {
         commands::all(&repo, &plain_env(), commands::BulkVerb::Down, &mut runner).unwrap();
 
     assert_eq!((code, summary.as_str()), (0, "no running projects\n"));
-    assert!(runner.verbs().is_empty());
+    assert_eq!(runner.verbs(), Vec::<Vec<String>>::new());
     assert_eq!(runner.recorded.len(), 1, "only the selection query ran");
 }
 

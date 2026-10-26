@@ -141,10 +141,10 @@ fn project_json_parsing_reads_dependencies_and_the_three_target_specs() {
 
     let whoami = repo.project("whoami").unwrap();
     assert_eq!(whoami.dir, Path::new("apps/whoami"));
-    assert!(whoami.implicit_dependencies.is_empty());
-    assert!(whoami.variables.is_empty());
-    assert!(whoami.volumes.is_empty());
-    assert!(whoami.networks.is_empty());
+    assert_eq!(whoami.implicit_dependencies, Vec::<String>::new());
+    assert_eq!(whoami.variables, []);
+    assert_eq!(whoami.volumes, []);
+    assert_eq!(whoami.networks, []);
 
     let traefik = repo.project("traefik").unwrap();
     assert_eq!(traefik.dir, Path::new("apps/traefik"));

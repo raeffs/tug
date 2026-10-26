@@ -278,7 +278,7 @@ fn create_volumes_rejects_an_unknown_project_listing_the_valid_names() {
     assert!(error.contains("unknown project"), "got: {error}");
     assert!(error.contains("app, base"), "got: {error}");
     // Nothing was spawned, not even the ls query.
-    assert!(runner.recorded.is_empty());
+    assert_eq!(runner.recorded, []);
 }
 
 #[test]

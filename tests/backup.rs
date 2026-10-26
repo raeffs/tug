@@ -195,7 +195,7 @@ fn restore_fails_before_spawning_when_an_archive_is_missing() {
         "message misses the missing archive: {message}"
     );
     // Nothing was spawned — not even app-data's restore.
-    assert!(runner.recorded.is_empty());
+    assert_eq!(runner.recorded, []);
 }
 
 fn restore_argv(volume: &str, force: bool) -> Vec<String> {
@@ -324,5 +324,5 @@ fn backup_rejects_an_unknown_project_listing_the_valid_names() {
         message.contains("base"),
         "message misses valid names: {message}"
     );
-    assert!(runner.recorded.is_empty());
+    assert_eq!(runner.recorded, []);
 }
