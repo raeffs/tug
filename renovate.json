@@ -2,5 +2,20 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "local>renovate-bot/renovate-config"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Pinned Rust toolchain: bump via PR so new lints surface in CI instead of breaking main",
+      "managerFilePatterns": [
+        "/^rust-toolchain\\.toml$/"
+      ],
+      "matchStrings": [
+        "channel\\s*=\\s*\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "rust",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
   ]
 }
