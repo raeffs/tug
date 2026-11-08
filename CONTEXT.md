@@ -54,8 +54,11 @@ reading the source or writing about it, use them too.
 
 ## Environment & configuration
 
-- **Environment name** — resolved once per run: `ci` when `CI` is set, else
-  `$ENVIRONMENT_NAME`, else `local`. It selects the compose overlay.
+- **Environment name** — resolved once per run: `ci` when `CI` is set in
+  tug's process environment, else `ENVIRONMENT_NAME` from the process
+  environment, then the repo-root `.env.local`, then the repo-root `.env`,
+  else `local`. Project dotenv files never take part. It selects the compose
+  overlay.
 
 - **Compose overlay** — an optional `docker-compose.<env>.yml` layered on top
   of the base `docker-compose.yml` for the active environment (Docker Compose
