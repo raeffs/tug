@@ -1,6 +1,6 @@
 [package]
 name = "tug"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2024"
 description = "Orchestrates a repository's Docker Compose projects"
 authors = ["Raphael Fleischlin"]

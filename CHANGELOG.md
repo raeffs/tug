@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.1] — 2026-11-08
 
 ### Fixed
 
@@ -29,5 +29,6 @@
 
 First public release.
 
+[1.1.1]: https://github.com/raeffs/tug/releases/tag/v1.1.1
 [1.1.0]: https://github.com/raeffs/tug/releases/tag/v1.1.0
 [1.0.0]: https://github.com/raeffs/tug/releases/tag/v1.0.0
