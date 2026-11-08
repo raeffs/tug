@@ -397,6 +397,124 @@ fn up_gives_every_child_the_merged_environment_of_its_project() {
     assert!(!traefik.env.contains_key("FROM_PROJECT"));
 }
 
+fn no_deps() -> commands::UpOptions {
+    commands::UpOptions {
+        no_deps: true,
+        ..commands::UpOptions::default()
+    }
+}
+
+const BONOB_LARGE: [&str; 9] = [
+    "docker",
+    "compose",
+    "--file",
+    "apps/bonob/docker-compose.yml",
+    "--file",
+    "apps/bonob/docker-compose.large.yml",
+    "up",
+    "--yes",
+    "--remove-orphans",
+];
+
+#[test]
+fn up_picks_the_overlay_named_in_the_root_env_local() {
+    let root = common::fixture("chain");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    std::fs::write(
+        root.join("apps/bonob/docker-compose.large.yml"),
+        "services: {}\n",
+    )
+    .unwrap();
+    let repo = Repo::discover(&root).unwrap();
+    let mut runner = RecordingRunner::new();
+
+    commands::up(&repo, &plain_env(), "bonob", &no_deps(), &mut runner).unwrap();
+
+    let mut expected: Vec<&str> = BONOB_LARGE.to_vec();
+    expected.push("--detach");
+    assert_eq!(runner.recorded()[0].argv, expected);
+}
+
+#[test]
+fn up_picks_the_same_overlay_when_launched_from_a_project_subfolder() {
+    let root = common::fixture("chain");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    std::fs::write(
+        root.join("apps/bonob/docker-compose.large.yml"),
+        "services: {}\n",
+    )
+    .unwrap();
+    let repo = Repo::discover(&root.join("apps/navidrome")).unwrap();
+    let mut runner = RecordingRunner::new();
+
+    commands::up(&repo, &plain_env(), "bonob", &no_deps(), &mut runner).unwrap();
+
+    let mut expected: Vec<&str> = BONOB_LARGE.to_vec();
+    expected.push("--detach");
+    assert_eq!(runner.recorded()[0].argv, expected);
+}
+
+#[test]
+fn up_ignores_environment_name_in_the_project_dotenv_for_the_overlay() {
+    let root = common::fixture("chain");
+    std::fs::write(
+        root.join("apps/bonob/.env.local"),
+        "ENVIRONMENT_NAME=large\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("apps/bonob/docker-compose.large.yml"),
+        "services: {}\n",
+    )
+    .unwrap();
+    let repo = Repo::discover(&root).unwrap();
+    let mut runner = RecordingRunner::new();
+
+    commands::up(&repo, &plain_env(), "bonob", &no_deps(), &mut runner).unwrap();
+
+    // Name stays `local`, so the fixture's docker-compose.local.yml is the overlay.
+    assert_eq!(
+        runner.recorded()[0].argv,
+        [
+            "docker",
+            "compose",
+            "--file",
+            "apps/bonob/docker-compose.yml",
+            "--file",
+            "apps/bonob/docker-compose.local.yml",
+            "up",
+            "--yes",
+            "--remove-orphans",
+            "--detach",
+        ]
+    );
+    // The child process still sees the project's variable.
+    assert_eq!(
+        runner.recorded()[0].env.get("ENVIRONMENT_NAME").unwrap(),
+        "large"
+    );
+}
+
+#[test]
+fn up_ignores_ci_in_the_root_dotenv_for_flags_and_overlay() {
+    let root = common::fixture("chain");
+    std::fs::write(root.join(".env"), "CI=1\n").unwrap();
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    std::fs::write(
+        root.join("apps/bonob/docker-compose.large.yml"),
+        "services: {}\n",
+    )
+    .unwrap();
+    let repo = Repo::discover(&root).unwrap();
+    let mut runner = RecordingRunner::new();
+
+    commands::up(&repo, &plain_env(), "bonob", &no_deps(), &mut runner).unwrap();
+
+    let mut expected: Vec<&str> = BONOB_LARGE.to_vec();
+    expected.push("--detach");
+    assert_eq!(runner.recorded()[0].argv, expected);
+}
+
 #[test]
 fn up_rejects_an_unknown_project_listing_the_valid_names() {
     // An unknown project name produces a clear error listing valid names.

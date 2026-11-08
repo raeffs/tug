@@ -527,8 +527,10 @@ fn named_compose_project<'repo>(repo: &'repo Repo, name: &str) -> Result<&'repo 
 }
 
 /// One `docker compose` invocation for `project`: repo-root cwd,
-/// repo-relative `--file` paths with the environment overlay,
-/// the merged environment, and the CI flags when `CI` is set.
+/// repo-relative `--file` paths with the environment overlay (named by the
+/// process environment or the repo-root dotenv files, see
+/// `env::environment_name`), the merged environment, and the CI flags when
+/// `CI` is set in the process environment alone.
 fn compose_invocation(
     repo: &Repo,
     project: &Project,
