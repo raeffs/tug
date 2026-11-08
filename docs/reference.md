@@ -160,10 +160,15 @@ because it is graph-only.
 
 Resolved once per invocation:
 
-1. If the `CI` environment variable is set (to any value, including empty):
-   `ci`.
-2. Else if `ENVIRONMENT_NAME` is set: its value.
+1. If the `CI` variable is set in tug's own process environment (to any
+   value, including empty): `ci`. `CI` in a dotenv file does not count.
+2. Else if `ENVIRONMENT_NAME` is set, taking the first of: tug's process
+   environment, `<repoRoot>/.env.local`, `<repoRoot>/.env`: its value.
 3. Else: `local`.
+
+Only the repo-root dotenv files take part. `ENVIRONMENT_NAME` in
+`<projectDir>/.env.local` or `<projectDir>/.env` reaches the spawned
+`docker` process (2.3) but never selects the overlay (2.2).
 
 ### 2.2 Compose file layering
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- `ENVIRONMENT_NAME` in the repo-root `.env.local` or `.env` selects the
+  compose overlay again, as it did under the Nx plugin. The process
+  environment still wins over both files. (#223)
+
 ## [1.1.0] — 2026-08-01
 
 ### Added
