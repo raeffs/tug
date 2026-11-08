@@ -10,15 +10,28 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 
 /// Resolve the environment name for this invocation.
-#[must_use]
-pub fn environment_name(process_env: &BTreeMap<String, String>) -> String {
+///
+/// `CI` set in the process environment (to any value) resolves to `ci`.
+/// Otherwise `ENVIRONMENT_NAME` is read from, highest precedence first, the
+/// process environment, `<repoRoot>/.env.local`, `<repoRoot>/.env`; default
+/// `local`. Project-level dotenv files never take part.
+///
+/// # Errors
+///
+/// Fails when a repo-root dotenv file exists but cannot be read.
+pub fn environment_name(
+    process_env: &BTreeMap<String, String>,
+    repo_root: &Path,
+) -> Result<String> {
     if process_env.contains_key("CI") {
-        return "ci".to_owned();
+        return Ok("ci".to_owned());
     }
-    if let Some(name) = process_env.get("ENVIRONMENT_NAME") {
-        return name.clone();
-    }
-    "local".to_owned()
+    let layers = [repo_root.join(".env.local"), repo_root.join(".env")];
+    let env = load_layers(process_env, &layers)?;
+    Ok(env
+        .get("ENVIRONMENT_NAME")
+        .cloned()
+        .unwrap_or_else(|| "local".to_owned()))
 }
 
 /// The `--file` arguments for a project's compose invocations:
@@ -48,7 +61,6 @@ pub fn merged_env(
     repo_root: &Path,
     project_dir: &Path,
 ) -> Result<BTreeMap<String, String>> {
-    let mut merged = process_env.clone();
     let project = repo_root.join(project_dir);
     let layers = [
         project.join(".env.local"),
@@ -56,11 +68,22 @@ pub fn merged_env(
         repo_root.join(".env.local"),
         repo_root.join(".env"),
     ];
+    load_layers(process_env, &layers)
+}
+
+/// `base` with every dotenv file in `layers` merged under it, in order: a
+/// variable set by an earlier source is never overridden. Missing files are
+/// skipped.
+fn load_layers(
+    base: &BTreeMap<String, String>,
+    layers: &[PathBuf],
+) -> Result<BTreeMap<String, String>> {
+    let mut merged = base.clone();
     for path in layers {
         if !path.is_file() {
             continue;
         }
-        let text = std::fs::read_to_string(&path)
+        let text = std::fs::read_to_string(path)
             .with_context(|| format!("failed to read {}", path.display()))?;
         for (name, value) in parse_dotenv(&text) {
             merged.entry(name).or_insert(value);

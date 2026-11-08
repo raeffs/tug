@@ -17,32 +17,119 @@ fn process_env(vars: &[(&str, &str)]) -> BTreeMap<String, String> {
 
 #[test]
 fn ci_set_resolves_to_ci() {
+    let root = common::fixture("basic");
     let env = process_env(&[("CI", "true")]);
-    assert_eq!(environment_name(&env), "ci");
+    assert_eq!(environment_name(&env, &root).unwrap(), "ci");
 }
 
 #[test]
 fn environment_name_variable_resolves_to_its_value() {
+    let root = common::fixture("basic");
     let env = process_env(&[("ENVIRONMENT_NAME", "staging")]);
-    assert_eq!(environment_name(&env), "staging");
+    assert_eq!(environment_name(&env, &root).unwrap(), "staging");
 }
 
 #[test]
 fn ci_set_to_empty_still_resolves_to_ci() {
+    let root = common::fixture("basic");
     let env = process_env(&[("CI", "")]);
-    assert_eq!(environment_name(&env), "ci");
+    assert_eq!(environment_name(&env, &root).unwrap(), "ci");
 }
 
 #[test]
 fn ci_wins_over_environment_name_variable() {
+    let root = common::fixture("basic");
     let env = process_env(&[("CI", "1"), ("ENVIRONMENT_NAME", "staging")]);
-    assert_eq!(environment_name(&env), "ci");
+    assert_eq!(environment_name(&env, &root).unwrap(), "ci");
 }
 
 #[test]
 fn neither_variable_set_defaults_to_local() {
+    let root = common::fixture("basic");
     let env = process_env(&[]);
-    assert_eq!(environment_name(&env), "local");
+    assert_eq!(environment_name(&env, &root).unwrap(), "local");
+}
+
+#[test]
+fn environment_name_comes_from_the_root_env_local() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "large");
+}
+
+#[test]
+fn environment_name_comes_from_the_root_env_when_env_local_lacks_it() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "OTHER=1\n").unwrap();
+    std::fs::write(root.join(".env"), "ENVIRONMENT_NAME=large\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "large");
+}
+
+#[test]
+fn root_env_local_wins_over_root_env_for_the_name() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    std::fs::write(root.join(".env"), "ENVIRONMENT_NAME=small\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "large");
+}
+
+#[test]
+fn exported_environment_name_wins_over_the_root_dotenv_files() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    let env = process_env(&[("ENVIRONMENT_NAME", "staging")]);
+    assert_eq!(environment_name(&env, &root).unwrap(), "staging");
+}
+
+#[test]
+fn environment_name_in_a_project_dotenv_is_ignored() {
+    let root = common::fixture("basic");
+    std::fs::write(
+        root.join("apps/whoami/.env.local"),
+        "ENVIRONMENT_NAME=small\n",
+    )
+    .unwrap();
+    std::fs::write(root.join(".env"), "ENVIRONMENT_NAME=large\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "large");
+}
+
+#[test]
+fn ci_in_a_root_dotenv_does_not_resolve_to_ci() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "CI=1\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "local");
+}
+
+#[test]
+fn exported_ci_wins_over_environment_name_in_the_root_dotenv() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=large\n").unwrap();
+    assert_eq!(
+        environment_name(&process_env(&[("CI", "")]), &root).unwrap(),
+        "ci"
+    );
+}
+
+#[test]
+fn empty_environment_name_in_the_root_dotenv_is_the_empty_string() {
+    let root = common::fixture("basic");
+    std::fs::write(root.join(".env.local"), "ENVIRONMENT_NAME=\n").unwrap();
+    assert_eq!(environment_name(&process_env(&[]), &root).unwrap(), "");
+}
+
+#[cfg(unix)]
+#[test]
+fn unreadable_root_env_local_is_an_error() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = common::fixture("basic");
+    let path = root.join(".env.local");
+    std::fs::write(&path, "ENVIRONMENT_NAME=large\n").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+    if std::fs::read_to_string(&path).is_ok() {
+        return; // running as root: the mode does not block reads, nothing to test
+    }
+    let err = environment_name(&process_env(&[]), &root).unwrap_err();
+    assert!(err.to_string().contains("failed to read"), "{err:#}");
 }
 
 #[test]

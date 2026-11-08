@@ -535,7 +535,7 @@ fn compose_invocation(
     process_env: &BTreeMap<String, String>,
     compose_args: &[&str],
 ) -> Result<Invocation> {
-    let env_name = env::environment_name(process_env);
+    let env_name = env::environment_name(process_env, repo.root())?;
     let merged = env::merged_env(process_env, repo.root(), &project.dir)?;
     let mut argv: Vec<String> = vec!["docker".into(), "compose".into()];
     if process_env.contains_key("CI") {
