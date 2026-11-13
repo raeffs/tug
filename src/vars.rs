@@ -198,8 +198,7 @@ fn prompted_value(
             let suggestion = spec
                 .default_value
                 .as_deref()
-                .map(|default| expand(default, env))
-                .unwrap_or_default();
+                .map_or_default(|default| expand(default, env));
             text_prompt(&spec.description, &suggestion, spec.optional, console)
         }
         Some(VariableKind::Password) => {

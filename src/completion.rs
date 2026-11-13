@@ -73,8 +73,7 @@ fn argument_candidates(
                 .subcommands
                 .iter()
                 .find(|c| &c.name == verb)
-                .map(|nested| argument_candidates(nested, repo, tail, current))
-                .unwrap_or_default(),
+                .map_or_default(|nested| argument_candidates(nested, repo, tail, current)),
         };
     }
 
